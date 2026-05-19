@@ -4,6 +4,14 @@ Tek dosya. Sıfır pip bağımlılığı. Makinende çalışan bir AI agent.
 Yetenekler **Markdown dosyaları** olarak yaşıyor; model bunları gerektiğinde
 **lazy-load** ediyor — Anthropic Agent Skills ve [OpenClaw](https://github.com/openclaw/openclaw) gibi.
 
+> 📚 **Hangi sürümü inceliyorsunuz?**
+> Bu repo iki sürüm barındırıyor — blog yazılarına eşlik etmek için:
+> - **v1**: temel agent loop, 3 hardcoded tool ([branch `v1`](https://github.com/yildirimozal/miniagent/tree/v1) · tag [`v1.0`](https://github.com/yildirimozal/miniagent/releases/tag/v1.0))
+> - **v2** (bu sayfa): skill loader + lazy load ([branch `v2`](https://github.com/yildirimozal/miniagent/tree/v2) · tag [`v2.0`](https://github.com/yildirimozal/miniagent/releases/tag/v2.0))
+>
+> Sadece v1 ile başlamak istiyorsanız:
+> `git clone --branch v1 https://github.com/yildirimozal/miniagent`
+
 ## Neden bu repo var?
 
 - **Local çalışır** — bulut yok, ücret yok, veri makinenden çıkmaz.
@@ -344,8 +352,15 @@ Bu repo bir **iskelet**. OpenClaw'a doğru büyütmek için sıradaki adımlar:
 
 ## Versiyonlar
 
-- **v2** (mevcut) — skill loader + lazy load + primitives ayrımı
-- **v1** — 3 hardcoded tool (`list_files`, `read_file`, `calculator`). Git history'de: `git checkout defc363`
+| Sürüm | Ne içerir | Direkt göz at | Klonla |
+|---|---|---|---|
+| **v1** | Temel agent loop, 3 hardcoded tool (`list_files`/`read_file`/`calculator`), ~117 satır | [tree/v1](https://github.com/yildirimozal/miniagent/tree/v1) | `git clone --branch v1 https://github.com/yildirimozal/miniagent` |
+| **v2** | Skill loader + lazy load (OpenClaw stili), 3 primitive + 3 skill, ~257 satır | [tree/v2](https://github.com/yildirimozal/miniagent/tree/v2) | `git clone --branch v2 https://github.com/yildirimozal/miniagent` |
+| **main** | v2 ile aynı (geliştirme branch'i) | [tree/main](https://github.com/yildirimozal/miniagent) | `git clone https://github.com/yildirimozal/miniagent` |
+
+Tag'ler: [`v1.0`](https://github.com/yildirimozal/miniagent/releases/tag/v1.0) · [`v2.0`](https://github.com/yildirimozal/miniagent/releases/tag/v2.0)
+
+Eski versiyona git'siz erişim: GitHub'da [tree/v1](https://github.com/yildirimozal/miniagent/tree/v1) sayfasını açıp yeşil **"Code"** butonu → **"Download ZIP"**.
 
 ---
 
