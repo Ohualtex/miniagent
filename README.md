@@ -1,25 +1,60 @@
-# Mini Agent — ~100 satırda local AI asistanı
+# Mini Agent — Local AI asistanı + Skill Loader (v2)
 
-Bir dosya. Sıfır bağımlılık. Makinende çalışan bir AI agent.
-
-Bu repo, modern "agent" sistemlerinin (Claude Code, OpenClaw, LangChain, vb.) altında dönen mantığı **çıplak haliyle** göstermek için yazıldı. ~110 satır Python, sadece standart kütüphane.
+Tek dosya. Sıfır pip bağımlılığı. Makinende çalışan bir AI agent.
+Yetenekler **Markdown dosyaları** olarak yaşıyor; model bunları gerektiğinde
+**lazy-load** ediyor — Anthropic Agent Skills ve [OpenClaw](https://github.com/openclaw/openclaw) gibi.
 
 ## Neden bu repo var?
 
 - **Local çalışır** — bulut yok, ücret yok, veri makinenden çıkmaz.
-- **Sıfır `pip install`** — yalnız Python stdlib (`urllib`, `json`, `os`).
-- **Tek dosya** — agent mantığının tamamı [`agent.py`](agent.py)'de, okunur.
-- **Eğitim odaklı** — yorumlar Türkçe, kavramlar bu README'de açıklı.
+- **Sıfır `pip install`** — yalnız Python stdlib (`urllib`, `json`, `subprocess`).
+- **Tek dosya çekirdek** + `skills/` klasörü — okunur, fork'lanır, genişletilir.
+- **Eğitim odaklı** — production değil ders kodu; her satır anlaşılabilir.
 
-> *"Bir agent aslında ne kadar basit?"* sorusuna **somut bir cevap**.
+> *"Bir agent skill sistemi aslında ne kadar basit?"* sorusuna **somut bir cevap**.
+
+---
+
+## Mimari özeti
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  PRIMITIVES (her zaman var, kod olarak duruyor)          │
+│    • read_file   → dosya oku                             │
+│    • list_files  → klasör listele                        │
+│    • bash        → shell komutu çalıştır                 │
+└──────────────────────────────────────────────────────────┘
+                          ▲
+                          │ skill'ler bu primitive'leri çağırır
+                          │
+┌──────────────────────────────────────────────────────────┐
+│  SKILLS (lazy-load, markdown olarak yaşıyor)             │
+│    skills/                                               │
+│      weather/SKILL.md            — curl ile hava durumu  │
+│      find-large-files/SKILL.md   — du ile büyük dosyalar │
+│      mac-notification/SKILL.md   — osascript ile bildirim│
+└──────────────────────────────────────────────────────────┘
+                          ▲
+                          │ katalog (name + description + location)
+                          │ sistem prompt'a ekleniyor
+                          ▼
+                   ┌──────────────┐
+                   │   QWEN 2.5   │
+                   │   karar verir│
+                   └──────────────┘
+```
+
+**Skill = yetenek değil, talimat seti.** Asıl iş `bash` ile çalışan binary'lerde
+(curl, du, osascript, ...). Skill modele *"şu komutu, şu argümanla, şöyle yorumla"*
+diyor — model okuyup uyguluyor.
 
 ---
 
 ## Önce ne lazım?
 
-- macOS (Apple Silicon önerilir) ya da Linux
+- macOS (Apple Silicon önerilir) veya Linux
 - Python 3.10+
-- ~5 GB boş disk (model için)
+- ~5 GB boş disk
 - ~8 GB RAM (16 GB daha rahat)
 
 ---
@@ -28,123 +63,114 @@ Bu repo, modern "agent" sistemlerinin (Claude Code, OpenClaw, LangChain, vb.) al
 
 ### 1. Ollama'yı kur
 
-Ollama, local LLM çalıştırmak için açık kaynak bir araç.
-
 ```bash
-# macOS (Homebrew ile)
-brew install ollama
-
-# Diğer sistemler:
-# https://ollama.com/download
-```
-
-### 2. Servisi başlat
-
-```bash
+brew install ollama          # macOS
 brew services start ollama
-# veya foreground:  ollama serve
 ```
 
-### 3. Modeli indir (~5 GB)
+Diğer sistemler: [ollama.com/download](https://ollama.com/download).
+
+### 2. Modeli indir (~4.7 GB)
 
 ```bash
 ollama pull qwen2.5:7b
 ```
 
-**Neden Qwen 2.5 7B?** Multilingual (Türkçe iyi), tool calling için fine-tune edilmiş, Apache 2.0 lisanslı, M-serisi Mac'te ~30-60 token/sn üretiyor.
+**Neden Qwen 2.5 7B?** Multilingual (Türkçe iyi), tool calling için
+fine-tune edilmiş, Apache 2.0 lisanslı, M-serisi Mac'te 30-60 token/sn.
 
-### 4. Repo'yu klonla ve çalıştır
+### 3. Repo'yu klonla ve çalıştır
 
 ```bash
-git clone <bu-repo-url>
-cd mini-agent
+git clone https://github.com/yildirimozal/miniagent
+cd miniagent
 python3 agent.py
 ```
 
-Karşına bir prompt gelecek:
-
 ```
-Mini Agent (qwen2.5:7b) — cikmak icin 'q'
+Mini Agent v2 (qwen2.5:7b)
+Yuklenen skill sayisi: 3
+  - find-large-files: Bir klasördeki en büyük dosyaları/alt klasörleri bulur.
+  - mac-notification: macOS'ta masaüstü bildirimi gösterir. Sadece Mac'te çalışır.
+  - weather: Bir şehrin güncel hava durumunu söyler. İnternet bağlantısı ve curl gerekir.
+Cikmak icin 'q'
 
 Sen:
 ```
 
-Çıkmak için: `q` veya `Ctrl+C`.
+---
+
+## Canlı demo
+
+### Hava durumu — lazy-load akışı
+
+```
+Sen: Ankara'da hava nasil?
+  [tool] read_file({'path': '~/Desktop/miniagent/skills/weather/SKILL.md'})
+  [out ] --- name: weather description: Bir şehrin güncel hava durumunu söyler ...
+  [bash] $ curl -s 'https://wttr.in/Ankara?format=3'
+  [out ] ankara: 🌤️  +8°C
+
+Agent: Ankara'da hava sıcaklığı +8°C ve güneşli bir gün geçiriyorsunuz.
+```
+
+Bakın **iki tool çağrısı arka arkaya**:
+1. Önce `read_file` — skill'in talimat metnini context'e çekti
+2. Sonra `bash` — talimattan çıkardığı komutu çalıştırdı
+3. Sonuçtan doğal Türkçe cevabı oluşturdu
+
+Bu **lazy-load**. Skill body'leri sistem prompt'a hiç girmedi; model sadece
+kataloğu gördü, ihtiyacı olanı kendi çekti.
+
+### Büyük dosya bulma
+
+```
+Sen: ~/Downloads klasorumdeki en buyuk dosyalari bul
+  [tool] read_file({'path': '~/Desktop/miniagent/skills/find-large-files/SKILL.md'})
+  [out ] ...
+  [bash] $ du -ah ~/Downloads 2>/dev/null | sort -hr | head -10
+  [out ] 3.0G  /Users/ozal/Downloads ...
+
+Agent: İndirme klasörünüzdeki en büyük dosyaları buldum:
+1. 3.0G  /Users/ozal/Downloads
+2. 430M  /Users/ozal/Downloads/proje-arsivi
+3. 404M  /Users/ozal/Downloads/A3.1 (120 Puan)
+4. 388M  /Users/ozal/Downloads/proje-arsivi.rar
+```
 
 ---
 
-## İlk deneme
-
-### Basit hesap
-
-```
-Sen: 37 carpi 89 kac eder?
-  [tool] calculator({'expression': '37*89'})
-  [out ] 3293
-
-Agent: 37 çarpım 89, sonuc 3293'e eşittir.
-```
-
-Modelin **kendisi karar verdi** ki bu işe `calculator` lazım, argümanı kendisi hazırladı, sonucu okudu, doğal dilde cevapladı. Senin yazdığın kod sadece *"hesap yapan bir fonksiyon var"* dedi — gerisi modelin.
-
-### Klasör listeleme
-
-```
-Sen: ~/Desktop/mini-agent/ klasorunde hangi dosyalar var?
-  [tool] list_files({'directory': '~/Desktop/mini-agent/'})
-  [out ] agent.py
-
-Agent: `~/Desktop/mini-agent/` klasöründe `agent.py` adlı bir dosya var.
-```
-
-### Hata gördüğünde geri konuşması
-
-```
-Sen: ~/Documents/notlar.txt dosyasini oku
-  [tool] read_file({'path': '~/Documents/notlar.txt'})
-  [out ] Hata: [Errno 2] No such file or directory: ...
-
-Agent: Belirttiğiniz dosya bulunamadı. Yolu kontrol eder misiniz?
-```
-
-Tool hata döndü → model bunu okuyup **kullanıcıya açıkladı**. Bu döngünün gücü burada: model gerçek dünya geri bildirimine adapte oluyor.
-
----
-
-## Perdenin arkasında: bir agent'ın 4 parçası
+## Bir agent'ın 4 parçası (refresher)
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │  1. LLM (beyin)         →  Qwen 2.5 7B              │
-│  2. Tools (eller)       →  Python fonksiyonları     │
-│  3. Agent loop (döngü)  →  run_agent() fonksiyonu   │
+│  2. Tools (eller)       →  3 primitive + N skill    │
+│  3. Agent loop          →  run_agent() ~20 satır    │
 │  4. Memory / context    →  messages listesi         │
 └─────────────────────────────────────────────────────┘
 ```
 
-Modelin tek işi **bir sonraki adımı seçmek**. Eylem senin kodun. Loop'u kuran da senin kodun. Model **stateless** — her çağrıda geçmişi sen yolluyorsun.
+Modelin tek işi **bir sonraki adımı seçmek**. Eylem senin kodun. Model
+stateless — her çağrıda geçmişi sen yolluyorsun.
 
-## Agent döngüsü nasıl çalışıyor?
+## Agent döngüsü
 
 ```
    kullanıcı sorusu
         │
         ▼
    ┌───────────────────────────────┐
-   │ messages = [system, user]     │
+   │ messages = [system+katalog,   │
+   │             user]             │
    └─────────────┬─────────────────┘
                  │
                  ▼
    ┌───────────────────────────────┐
-   │ Ollama'ya istek (POST /chat)  │◄────┐
+   │ Ollama'ya gönder (primitives) │◄────┐
    └─────────────┬─────────────────┘     │
                  │                       │
                  ▼                       │
-   ┌───────────────────────────────┐     │
-   │ model cevabı geldi            │     │
-   │ messages.append(cevap)        │     │
-   └─────────────┬─────────────────┘     │
-                 │                       │
             tool çağrısı?                │
             ┌────┴────┐                  │
           evet        hayır              │
@@ -153,155 +179,173 @@ Modelin tek işi **bir sonraki adımı seçmek**. Eylem senin kodun. Loop'u kura
    ┌────────────┐  ┌─────────────────┐   │
    │ tool çalış │  │ cevabı kullanı- │   │
    │ sonucu mes-│  │ cıya göster &   │   │
-   │ sages'a ekle│ │ bitir           │   │
+   │ sages'a ekle│  │ bitir           │   │
    └─────┬──────┘  └─────────────────┘   │
          │                               │
          └──────── döngüye dön ──────────┘
 ```
 
-`agent.py` içinde tam olarak bu var, ~20 satır:
-
-```python
-def run_agent(user_input, max_iter=6):
-    messages = [
-        {"role": "system", "content": "Sen yardimci bir asistansin..."},
-        {"role": "user", "content": user_input},
-    ]
-    for _ in range(max_iter):
-        msg = chat(messages)              # Ollama'ya gönder
-        messages.append(msg)
-
-        tool_calls = msg.get("tool_calls") or []
-        if not tool_calls:
-            print(f"\nAgent: {msg['content']}")
-            return
-
-        for call in tool_calls:
-            name = call["function"]["name"]
-            args = call["function"]["arguments"]
-            result = TOOLS_MAP[name](**args)        # tool'u çalıştır
-            messages.append({"role": "tool", "content": str(result)})
-```
-
-Bu kadar. Claude Code, LangChain, OpenClaw — hepsinin altında bu döngünün varyantları var.
+`agent.py:run_agent()` içinde, ~25 satır.
 
 ---
 
-## Yeni tool ekleme — 3 adım
+## Skill formatı
 
-Diyelim ki **hava durumu** yeteneği eklemek istiyorsun.
-
-### Adım 1: Python fonksiyonu yaz
-
-```python
-def get_weather(city: str) -> str:
-    """Wttr.in'den hava bilgisi çek (API key gerekmez)."""
-    url = f"https://wttr.in/{city}?format=3"
-    req = urllib.request.Request(url, headers={"User-Agent": "curl/8"})
-    try:
-        with urllib.request.urlopen(req, timeout=5) as r:
-            return r.read().decode().strip()
-    except Exception as e:
-        return f"Hata: {e}"
-```
-
-### Adım 2: `TOOLS_MAP`'e kayıt
-
-```python
-TOOLS_MAP["get_weather"] = get_weather
-```
-
-### Adım 3: JSON şemayı tanımla
-
-```python
-TOOLS_SCHEMA.append({
-    "type": "function",
-    "function": {
-        "name": "get_weather",
-        "description": "Bir şehrin güncel hava durumunu döner.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "city": {
-                    "type": "string",
-                    "description": "Şehir adı, örn: 'Istanbul', 'Ankara'"
-                }
-            },
-            "required": ["city"]
-        }
-    }
-})
-```
-
-Bitti. Bir sonraki turda:
+Her skill bir **klasör** + içinde tek bir **`SKILL.md`**:
 
 ```
-Sen: Ankara'da hava nasil?
-  [tool] get_weather({'city': 'Ankara'})
-  [out ] Ankara: 🌦  +12°C
-Agent: Ankara'da şu an hafif yağmurlu, sıcaklık 12 derece.
+skills/
+  weather/
+    SKILL.md
+  find-large-files/
+    SKILL.md
+  mac-notification/
+    SKILL.md
 ```
 
-**Üç yer, ~30 satır.** Yeteneğin kullanılır hale gelmesi için tek gereken bu.
+`SKILL.md`'nin yapısı:
+
+```markdown
+---
+name: weather
+description: Bir şehrin güncel hava durumunu söyler.
+---
+
+# Weather Skill
+
+Bir şehrin güncel hava durumunu öğrenmek için wttr.in servisini kullan.
+
+## Çalıştırılacak komut
+
+`bash` tool'u ile şunu çalıştır:
+
+    curl -s 'https://wttr.in/<şehir>?format=3'
+
+## Sonuç geldikten sonra
+
+Çıktıyı kullanıcıya doğal Türkçe ile aktar.
+```
+
+İki kritik alan:
+- **`name`** + **`description`** — modele **katalog kartı** olarak gider
+- **Body** — model bu skill'i seçince **detaylı talimat** olarak okur
 
 ---
 
-## Deneyebileceğin promptlar
+## Lazy loading — neden önemli?
 
-| Prompt | Hangi tool tetiklenir |
-|---|---|
-| *"127 × 43 + 9 kaç eder?"* | `calculator` |
-| *"Masaüstümde neler var?"* | `list_files` |
-| *"~/Desktop/notes.txt dosyasını oku"* | `read_file` |
-| *"İstanbul'un nüfusu kaç?"* | tool yok → modelin kendi bilgisinden |
-| *"Documents'ı listele, txt varsa içeriğini de göster"* | iki tool peş peşe (multi-step) |
-| *"Bana bir Python fibonacci fonksiyonu yaz"* | tool yok → model kod döner (metin olarak) |
+100 skill'iniz olsa, her birinin ~50 satırlık body'sini her prompt'a koysanız
+modelin context'i şişer. Lazy loading şu mantıkla çözüyor:
 
----
+1. **Başlangıç**: sistem prompt'a sadece **katalog** giriyor (~5 satır/skill)
+2. **Kullanıcı bir şey sorar** → model uygun skill'i kataloğdan seçer
+3. **`read_file(<skill location>)`** ile body'i çeker (sadece o)
+4. Talimatı uygular
 
-## Mevcut 3 tool
-
-| Tool | İş |
-|---|---|
-| `list_files(directory)` | Klasördeki dosya/alt klasörleri listeler |
-| `read_file(path)` | Dosya içeriğini okur (ilk 2000 karakter) |
-| `calculator(expression)` | Matematik ifadesini hesaplar (`+ - * / ( )`) |
-
-Hepsi `agent.py` içinde, ~20 satırda. İlham için bak, kendi tool'unu yaz.
+OpenClaw bu pattern'i 100+ skill ile ölçeklendiriyor. Bizimki minimal hâli.
 
 ---
 
-## Sınırlar (dürüstçe)
+## Yeni skill ekleme — sıfır Python
 
-- **Frontier model değil.** Qwen 2.5 7B, GPT-4 / Claude 4.7 seviyesinde değildir. Karmaşık çoklu adım planlama (örn. *"5 PDF'i karşılaştır, ortak temaları çıkar, sunum hazırla"*) zayıf.
-- **Hallucination riski var.** Bilmediği bir konuda uydurabilir. Atıf veren tool eklemeden *"bu makale gerçek mi?"* sorma.
-- **`calculator` `eval()` kullanıyor** — sadece sayı/operatör karakterleri kabul ediyor ama yeni tool eklerken `subprocess`, `eval` gibi yapılarda **çok dikkatli ol**. Production için sandbox şart.
-- **Context limit.** Çok uzun tool çıktıları (50 KB+) modelin dikkatini dağıtır. `read_file` 2000 karakter limiti bunun için var.
-- **Tek thread.** Çok sayıda eşzamanlı kullanıcı için tasarlanmadı. Bir kişinin terminalinde çalıştırılan bir araç.
+Hava durumu için zaten bir skill var. Diyelim ki bir **GitHub issue listeleyici**
+istiyorsunuz. Sadece bir dosya yazıyorsunuz:
+
+```bash
+mkdir skills/gh-issues
+```
+
+`skills/gh-issues/SKILL.md`:
+
+```markdown
+---
+name: gh-issues
+description: Bir GitHub repo'sundaki açık issue'ları listeler. gh CLI gerekli.
+---
+
+# GitHub Issues Skill
+
+## Çalıştırılacak komut
+
+`bash` tool'u ile şunu çalıştır:
+
+    gh issue list --repo <owner/repo> --limit 10
+
+## Sonuç geldikten sonra
+
+Issue başlıklarını numaralandırılmış liste halinde kullanıcıya göster.
+```
+
+Agent'ı yeniden başlatın. Katalogda yeni skill'i göreceksiniz. Test:
+
+```
+Sen: openclaw repo'sunda son issue'lar neler?
+  [tool] read_file({'path': '~/.../skills/gh-issues/SKILL.md'})
+  [out] ...
+  [bash] $ gh issue list --repo openclaw/openclaw --limit 10
+  ...
+```
+
+**Tek Python satırı yazmadan yeni yetenek.** OpenClaw'ın temel sloganı.
 
 ---
 
-## Bundan sonra büyütülebilir yönler
+## Sınırlar — dürüstçe
 
-Bu repo bir **iskelet**. Şu yönlere genişletilebilir:
+Bu reponun amacı eğitim. Production değil. Bilmeniz gerekenler:
 
-- **Daha fazla tool**: web arama, e-mail, shell, `.docx`/`.pdf` okuma
-- **Skill loader** ([OpenClaw](https://github.com/openclaw/openclaw) tarzı): her yetenek ayrı bir Markdown dosyası, kataloğa göre lazy-load
+**Tool kullanım tutarlılığı.** Qwen 2.5 7B multi-step tool kullanımında
+**zaman zaman tutarsız**. Aynı sorgu bazen skill'i okuyor, bazen direkt bash
+ile gidiyor, bazen "skill yok" diyor. Üç başlık altında çözüm:
+
+1. **SKILL.md'yi imperative yazın** — "şunu yap" gibi direkt ifadeler. Örnek
+   çıktı göstermek tehlikeli (model halüsine eder).
+2. **Kod-seviyesinde müdahale** ekleyin — bu repo'da `agent.py` SKILL.md
+   okumasından sonra modele sentetik bir hatırlatma enjekte ediyor.
+3. **Daha büyük model**: `qwen2.5:14b` (~9 GB) tool use'da belirgin daha
+   güvenilir. `MODEL = "qwen2.5:14b"` ile geçilir.
+
+**`bash` tehlikeli.** LLM rastgele komut üretebilir. Bu kod subprocess
++ 30 saniye timeout ile sınırlandı, ama **production için sandbox şart**
+(Docker, Firecracker, gVisor, vs.).
+
+**Halüsinasyon riski.** 7B modeller bilmedikleri yerde uydurur. Atıf doğrulayan
+tool eklemeden *"bu makale gerçek mi?"* sormayın.
+
+**Context limit.** Tool çıktıları MAX_OUTPUT=4000 karaktere kesiliyor.
+Çok büyük dosya/komut çıktıları için chunking gerekir.
+
+---
+
+## Bundan sonra ne yapılabilir?
+
+Bu repo bir **iskelet**. OpenClaw'a doğru büyütmek için sıradaki adımlar:
+
 - **Provider abstraction**: Ollama yerine Anthropic/OpenAI'a tek satırla geçiş
-- **Web UI**: [Streamlit](https://streamlit.io) ile ~30 satırlık chat arayüzü
-- **Memory**: konuşma geçmişini diske kaydet
-- **RAG**: PDF/Word'leri embed et, "soru sor, kaynaktan cevap al"
-- **Model swap**: `MODEL = "qwen2.5:14b"` → daha akıllı, biraz yavaş
+- **Daha çok skill**: web arama, e-mail, takvim, .docx okuma, vs.
+- **Skill katmanları**: workspace skills > user skills > bundled skills hierarchy
+- **MCP integrasyonu**: standart protokolle dış sistemlere bağlan
+- **Memory katmanı**: konuşma geçmişi, RAG, vector DB
+- **Web UI**: Streamlit ile chat arayüzü
+- **Onay sistemi**: tehlikeli bash komutları için kullanıcı onayı
 
 ---
 
 ## Daha fazla okuma
 
-- [Ollama belgeleri](https://github.com/ollama/ollama/blob/main/docs/api.md)
+- [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md)
 - [Qwen 2.5 makalesi](https://arxiv.org/abs/2412.15115)
 - [Anthropic — Building effective agents](https://www.anthropic.com/research/building-effective-agents)
-- [ReAct: Reasoning + Acting in LLMs](https://arxiv.org/abs/2210.03629)
+- [Anthropic — Agent Skills](https://www.anthropic.com/news/skills) — bu reponun ilham kaynağı
 - [OpenClaw](https://github.com/openclaw/openclaw) — production-grade local agent gateway
+- [ReAct paper](https://arxiv.org/abs/2210.03629)
+
+---
+
+## Versiyonlar
+
+- **v2** (mevcut) — skill loader + lazy load + primitives ayrımı
+- **v1** — 3 hardcoded tool (`list_files`, `read_file`, `calculator`). Git history'de: `git checkout defc363`
 
 ---
 
@@ -313,6 +357,9 @@ MIT — özgürce kullan, fork'la, dersinde paylaş. Detay: [LICENSE](LICENSE).
 
 ## Notlar
 
-Bu repo, **agent mantığını anlatan bir blog yazısının kod ekidir**. Detaylı anlatım için: *[blog yazısı linki buraya gelecek]*.
+Bu repo, agent mimarisini anlatan **iki blog yazısının** kod ekidir:
+
+1. *"100 Satır Python ile Kendi Yerel AI Asistanınızı Yazın"* — v1, temel agent loop
+2. *"OpenClaw Mimarisi Mini Sürümde: Skill Loader ve Lazy Load"* — v2, bu yazı
 
 Soru/öneri için Issues bölümünü kullanabilirsiniz.
