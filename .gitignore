@@ -21,10 +21,25 @@ env/
 .vscode/
 *.swp
 *.swo
+*~
 
 # macOS
 .DS_Store
 ._*
 
-# Logs
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+.nfs*
+
+# Logs & temp
 *.log
+*.tmp
+*.bak
+
+# Agent (local memory, config)
+.gemini/
