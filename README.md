@@ -1,5 +1,9 @@
 # Mini Agent — Local AI asistanı + Skill Loader (v2)
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
 Tek dosya. Sıfır pip bağımlılığı. Makinende çalışan bir AI agent.
 Yetenekler **Markdown dosyaları** olarak yaşıyor; model bunları gerektiğinde
 **lazy-load** ediyor — Anthropic Agent Skills ve [OpenClaw](https://github.com/openclaw/openclaw) gibi.
