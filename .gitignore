@@ -28,3 +28,6 @@ env/
 
 # Logs
 *.log
+
+# Agent (local memory, config)
+.gemini/
