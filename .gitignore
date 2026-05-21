@@ -42,3 +42,4 @@ Desktop.ini
 
 # Agent (local memory, config)
 .gemini/
+.claude/
