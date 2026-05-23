@@ -1,0 +1,41 @@
+name: Skill Spec Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  skill-check:
+    name: Validate skills against Ajanox Skill Spec v1.0
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ajanox
+        run: pip install ajanox
+
+      - name: Check all skills
+        run: |
+          set -uo pipefail
+          fail=0
+          shopt -s nullglob
+          for d in skills/*/; do
+            echo "::group::ajanox skill check $d"
+            if ! ajanox skill check "$d"; then
+              echo "::error file=${d}SKILL.md::Skill '$d' is not compliant with Ajanox Skill Spec v1.0"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          if [ "$fail" -ne 0 ]; then
+            echo "Bir veya daha fazla skill spec kontrolünden geçemedi."
+            exit 1
+          fi
+          echo "Tüm skill'ler Ajanox Skill Spec v1.0 ile uyumlu."
