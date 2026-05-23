@@ -215,12 +215,29 @@ skills/
     SKILL.md
 ```
 
-`SKILL.md`'nin yapısı:
+`SKILL.md`'nin yapısı (**Ajanox Skill Spec v1.0**):
 
 ```markdown
 ---
 name: weather
-description: Bir şehrin güncel hava durumunu söyler.
+version: 0.1.0
+description: Bir şehrin güncel hava durumunu söyler. İnternet bağlantısı ve curl gerekir.
+icon: "🌤️"
+example_prompt: "İstanbul'da hava nasıl?"
+ajanox: ">=1.0.0 <2.0.0"
+permissions: [shell_safe, network_read]
+network:
+  allowed_domains: [wttr.in]
+author:
+  name: Yıldırım Özal
+  github: yildirimozal
+license: MIT
+language: tr
+languages: [tr, en]
+requires:
+  binaries: [curl]
+  internet: true
+tags: [weather, info, network]
 ---
 
 # Weather Skill
@@ -233,14 +250,35 @@ Bir şehrin güncel hava durumunu öğrenmek için wttr.in servisini kullan.
 
     curl -s 'https://wttr.in/<şehir>?format=3'
 
-## Sonuç geldikten sonra
+## Sonuç işleme
 
 Çıktıyı kullanıcıya doğal Türkçe ile aktar.
+
+## Hata durumları
+
+Boş çıktı/bağlantı hatasında tekrar denenmesini söyle; `curl` yoksa bildir.
 ```
 
-İki kritik alan:
-- **`name`** + **`description`** — modele **katalog kartı** olarak gider
-- **Body** — model bu skill'i seçince **detaylı talimat** olarak okur
+Zorunlu frontmatter alanları:
+- **`name`** — kebab-case
+- **`version`** — semver (örn. `0.1.0`)
+- **`description`** — `name` ile birlikte modele **katalog kartı** olarak gider
+- **`ajanox`** — uyumlu çekirdek sürüm aralığı (v1.x için `">=1.0.0 <2.0.0"`)
+- **`permissions`** — skill'in ihtiyaç duyduğu izinler; `sudo` yasak
+
+Önerilen alanlar (marketplace kartı için): `icon`, `example_prompt`, `author`,
+`license`, `language`/`languages`, `requires`, `tags`. Ağ kullanan skill'lerde
+`network.allowed_domains` ile erişilen domain'leri kısıtlayın.
+
+- **Body** — model bu skill'i seçince **detaylı talimat** olarak okur. Önerilen
+  başlıklar: `Çalıştırılacak komut`, `Sonuç işleme`, `Hata durumları`
+
+Bir skill'in spec'e uyumunu kontrol etmek için:
+
+```bash
+pip install ajanox
+ajanox skill check skills/weather
+```
 
 ---
 
@@ -272,7 +310,20 @@ mkdir skills/gh-issues
 ```markdown
 ---
 name: gh-issues
+version: 0.1.0
 description: Bir GitHub repo'sundaki açık issue'ları listeler. gh CLI gerekli.
+icon: "🐙"
+example_prompt: "openclaw repo'sunda açık issue'lar neler?"
+ajanox: ">=1.0.0 <2.0.0"
+permissions: [shell_safe, network_read]
+network:
+  allowed_domains: [github.com, api.github.com]
+license: MIT
+language: tr
+requires:
+  binaries: [gh]
+  internet: true
+tags: [github, dev, info]
 ---
 
 # GitHub Issues Skill
@@ -283,10 +334,18 @@ description: Bir GitHub repo'sundaki açık issue'ları listeler. gh CLI gerekli
 
     gh issue list --repo <owner/repo> --limit 10
 
-## Sonuç geldikten sonra
+## Sonuç işleme
 
 Issue başlıklarını numaralandırılmış liste halinde kullanıcıya göster.
+
+## Hata durumları
+
+`gh` kurulu/oturum açık değilse veya repo bulunamazsa kullanıcıya açıkla.
 ```
+
+Göndermeden önce spec uyumunu doğrulayın (`ajanox skill check skills/gh-issues`).
+Bu repoya açılan her PR'da CI (`.github/workflows/skills.yml`) tüm skill'leri
+otomatik kontrol eder; uyumsuz bir skill merge edilemez.
 
 Agent'ı yeniden başlatın. Katalogda yeni skill'i göreceksiniz. Test:
 
