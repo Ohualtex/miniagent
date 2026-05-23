@@ -11,11 +11,21 @@ odaklıdır, bu yüzden açıklık ve sadelik her şeyin üstündedir.
    ```bash
    mkdir skills/skill-adiniz
    ```
-2. İçine şu yapıda bir `SKILL.md` ekleyin:
+2. İçine **Ajanox Skill Spec v1.0** formatında bir `SKILL.md` ekleyin:
    ```markdown
    ---
    name: skill-adiniz
+   version: 0.1.0
    description: Skill'in ne yaptığını anlatan tek satırlık açıklama.
+   icon: "🔧"
+   example_prompt: "Örnek bir kullanıcı isteği"
+   ajanox: ">=1.0.0 <2.0.0"
+   permissions: [shell_safe]
+   license: MIT
+   language: tr
+   requires:
+     internet: false
+   tags: [info]
    ---
 
    # Skill Başlığı
@@ -28,11 +38,25 @@ odaklıdır, bu yüzden açıklık ve sadelik her şeyin üstündedir.
 
        komutunuz --argümanlarla
 
-   ## Sonuç geldikten sonra
+   ## Sonuç işleme
 
    Agent'ın çıktıyı kullanıcıya nasıl sunacağını açıklayın.
+
+   ## Hata durumları
+
+   Hangi hataların olabileceğini ve nasıl raporlanacağını açıklayın.
    ```
-3. Agent'ı yeniden başlatın — skill'iniz katalogda otomatik görünür.
+   Zorunlu alanlar: `name`, `version`, `description`, `ajanox`, `permissions`
+   (geçerli izinler arasından seçin — `sudo` yasak). Ağ kullanan skill'lerde
+   `network.allowed_domains` ile domain'leri kısıtlayın.
+3. Göndermeden önce spec uyumunu doğrulayın:
+   ```bash
+   pip install ajanox
+   ajanox skill check skills/skill-adiniz
+   ```
+   Her PR'da CI (`.github/workflows/skills.yml`) tüm skill'leri otomatik
+   kontrol eder; uyumsuz bir skill merge edilemez.
+4. Agent'ı yeniden başlatın — skill'iniz katalogda otomatik görünür.
 
 ---
 
