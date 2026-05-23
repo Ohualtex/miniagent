@@ -22,9 +22,10 @@ python3 -m json.tool <dosya_yolu>
 
 **Eğer kullanıcı doğrudan JSON metni yapıştırdıysa:**
 
-```
-echo '<json_metni>' | python3 -m json.tool
-```
+`echo '<json>' | python3 -m json.tool` **kullanma** — JSON içinde tek tırnak
+veya shell özel karakterleri varsa komut kırılır ve injection riski doğar.
+Bunun yerine kullanıcıdan metni geçici bir dosyaya kaydetmesini iste (örn.
+`~/in.json`) ve sonra dosya yoluyla `python3 -m json.tool ~/in.json` çalıştır.
 
 ## Sonuç geldikten sonra
 
