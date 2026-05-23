@@ -9,6 +9,7 @@ Cik:       q  (veya Ctrl+C)
 import json
 import os
 import subprocess
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -161,8 +162,15 @@ def chat(messages):
     }).encode()
     req = urllib.request.Request(OLLAMA_URL, data=payload,
                                  headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req) as resp:
-        return json.loads(resp.read())["message"]
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return json.loads(resp.read())["message"]
+    except urllib.error.URLError as e:
+        raise RuntimeError(
+            f"Ollama'ya baglanilamadi ({OLLAMA_URL}). "
+            f"Calisiyor mu? 'brew services start ollama' veya 'ollama serve'. "
+            f"Detay: {e.reason}"
+        )
 
 
 # =========================================================
@@ -211,7 +219,13 @@ def run_agent(user_input: str, catalog: list[dict], max_iter: int = 8):
             else:
                 if name != "bash":
                     print(f"  [tool] {name}({args})")
-                result = PRIMITIVES[name](**args)
+                try:
+                    result = PRIMITIVES[name](**args)
+                except TypeError as e:
+                    # Model bozuk arguman uretirse oturum dusmesin
+                    result = f"Hata: tool '{name}' icin gecersiz arguman — {e}"
+                except Exception as e:
+                    result = f"Hata: tool '{name}' calistirilamadi — {e}"
                 preview = str(result)[:120].replace("\n", " ")
                 print(f"  [out ] {preview}{'...' if len(str(result)) > 120 else ''}")
             messages.append({"role": "tool", "content": str(result)})
@@ -254,4 +268,7 @@ if __name__ == "__main__":
         if q.lower() in ("q", "quit", "exit"):
             break
         if q:
-            run_agent(q, catalog)
+            try:
+                run_agent(q, catalog)
+            except RuntimeError as e:
+                print(f"\nHata: {e}\n")
