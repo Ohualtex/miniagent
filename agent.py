@@ -211,6 +211,7 @@ def run_agent(user_input: str, catalog: list[dict], max_iter: int = 8):
                 print(f"\nAgent: {content}\n")
             return
 
+        skill_md_read = False
         for call in tool_calls:
             name = call["function"]["name"]
             args = call["function"]["arguments"]
@@ -230,19 +231,26 @@ def run_agent(user_input: str, catalog: list[dict], max_iter: int = 8):
                 print(f"  [out ] {preview}{'...' if len(str(result)) > 120 else ''}")
             messages.append({"role": "tool", "content": str(result)})
 
-            # === Deterministik mudahale ===
-            # Model bir SKILL.md okuduysa, bir sonraki turda komutu
-            # CALISTIRMAYI unutmasın diye sentetik bir hatırlatma ekle.
-            if name == "read_file" and "SKILL.md" in str(args.get("path", "")):
-                messages.append({
-                    "role": "user",
-                    "content": (
-                        "[SISTEM] SKILL.md icerigini aldın. SIMDI uygun komutu "
-                        "`bash` tool'u ile CALISTIR. SKILL.md'deki ornek ciktilari "
-                        "cevap olarak KULLANMA — gercek komutu calistir ve gercek "
-                        "sonucu kullan. Komutu yalniz aciklama, calistir."
-                    )
-                })
+            # SKILL.md okumasini isaretle; enjeksiyon tum tool sonuclari
+            # eklendikten sonra, dongu disinda yapilir (cogul tool_calls
+            # senaryosunda tool/user/tool sirasini bozmamak icin).
+            if (name == "read_file" and isinstance(args, dict)
+                    and "SKILL.md" in str(args.get("path", ""))):
+                skill_md_read = True
+
+        # === Deterministik mudahale ===
+        # Model bir SKILL.md okuduysa, bir sonraki turda komutu
+        # CALISTIRMAYI unutmasın diye sentetik bir hatırlatma ekle.
+        if skill_md_read:
+            messages.append({
+                "role": "user",
+                "content": (
+                    "[SISTEM] SKILL.md icerigini aldın. SIMDI uygun komutu "
+                    "`bash` tool'u ile CALISTIR. SKILL.md'deki ornek ciktilari "
+                    "cevap olarak KULLANMA — gercek komutu calistir ve gercek "
+                    "sonucu kullan. Komutu yalniz aciklama, calistir."
+                )
+            })
 
     print("\n(Max iteration asildi.)\n")
 
