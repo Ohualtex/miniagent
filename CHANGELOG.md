@@ -6,6 +6,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/)
 
 ---
 
+## [Unreleased]
+
+### Eklenen
+- 5 yeni skill: `git-log`, `ip-location`, `json-format`, `open-ports`, `system-info`
+- Repo hijyeni: `CONTRIBUTING.md`, `SECURITY.md`, `.editorconfig`, `requirements.txt`
+- GitHub şablonları: issue (`bug_report`, `feature_request`) ve PR template
+- README'ye lisans / Python / PRs welcome rozetleri
+
+### Değişen
+- `.gitignore` cross-platform genişletildi (Windows/Linux/macOS, IDE, virtualenv)
+- `.gitignore`'a `.gemini/` ve `.claude/` eklendi (yerel agent dizinleri)
+
 ## [v2.0] — 2026-05-18
 
 ### Eklenen
